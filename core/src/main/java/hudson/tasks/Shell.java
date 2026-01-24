@@ -30,6 +30,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Functions;
 import hudson.Util;
+import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.PersistentDescriptor;
 import hudson.remoting.VirtualChannel;
@@ -45,6 +46,7 @@ import jenkins.security.MasterToSlaveCallable;
 import jenkins.tasks.filters.EnvVarsFilterLocalRule;
 import jenkins.tasks.filters.EnvVarsFilterLocalRuleDescriptor;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -54,6 +56,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest2;
+import wormpex.data.WormpexContext;
 
 /**
  * Executes a series of commands by using a shell.
@@ -61,6 +64,12 @@ import org.kohsuke.stapler.StaplerRequest2;
  * @author Kohsuke Kawaguchi
  */
 public class Shell extends CommandInterpreter {
+
+    private static final String SHELL_HEAD = "#!/bin/bash";
+    private static final String INJECT_HADOOP_USER = "export HADOOP_USER_NAME=";
+    private static final String UNKNOWN_PROJECT = "UNKNOWN_PROJECT";
+
+    private transient AbstractProject<?, ?> currentProject;
 
     @DataBoundConstructor
     public Shell(String command) {
@@ -111,7 +120,45 @@ public class Shell extends CommandInterpreter {
 
     @Override
     protected String getContents() {
-        return addLineFeedForNonASCII(LineEndingConversion.convertEOL(command, LineEndingConversion.EOLType.Unix));
+        String cmd = addLineFeedForNonASCII(LineEndingConversion.convertEOL(command, LineEndingConversion.EOLType.Unix));
+        if (currentProject != null) {
+            String originalProxyUser = currentProject.getProxyUser();
+            String proxyUser = originalProxyUser;
+            if (StringUtils.isBlank(originalProxyUser)) {
+                proxyUser = WormpexContext.DEFAULT_PROXY_USER;
+                System.out.println("[" + currentProject.toString() + "] getShellFinalContents  proxyUser is blank use defaultProxyUser:+[" + WormpexContext.DEFAULT_PROXY_USER + "]");
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append("Project:[").
+                    append(currentProject.getName()).
+                    append("] Proxy User:[").
+                    append(proxyUser).
+                    append("] BuildId:[").
+                    append(currentProject.getNextBuildNumber() - 1 <= 0 ? 1 : currentProject.getNextBuildNumber() - 1).
+                    append("] Shell Context:");
+            String ret = buildwithProxyUser(cmd, proxyUser);
+            System.out.println(sb.toString() + "\n" + ret);
+            return ret;
+        } else {
+            LOGGER.warning("getShellFinalContents  project is null");
+            return cmd;
+        }
+    }
+
+    private String buildwithProxyUser(String cmd, String proxyUser) {
+        return new StringBuilder(SHELL_HEAD).append("\n").append(INJECT_HADOOP_USER).append(proxyUser).append("\n\n").append(cmd).toString();
+    }
+
+    @Override
+    public boolean perform(hudson.model.AbstractBuild<?, ?> build, hudson.Launcher launcher, hudson.model.TaskListener listener) throws InterruptedException {
+        if (build.getProject() instanceof AbstractProject) {
+            this.currentProject = (AbstractProject<?, ?>) build.getProject();
+        }
+        try {
+            return super.perform(build, launcher, listener);
+        } finally {
+            this.currentProject = null;
+        }
     }
 
     @Override

@@ -55,6 +55,15 @@ THE SOFTWARE.
         <l:skeleton />
 
         <div class="jenkins-section jenkins-section--no-border jenkins-!-margin-top-3">
+          <f:entry title="${%lineOfBusiness}" field="lineOfBusiness">
+            <f:select />
+          </f:entry>
+          <f:entry title="Owner" field="ownerName">
+            <f:textbox checkUrl="'${it.absoluteUrl}checkOwner?value='+encodeURIComponent(this.value)"/>
+          </f:entry>
+          <f:entry title="Contacts" field="contacts">
+            <f:textbox />
+          </f:entry>
           <f:entry title="${%Description}" help="${app.markupFormatter.helpUrl}">
             <f:textarea name="description" value="${it.description}" codemirror-mode="${app.markupFormatter.codeMirrorMode}" codemirror-config="${app.markupFormatter.codeMirrorConfig}" previewEndpoint="/markupFormatter/previewDescription"/>
           </f:entry>

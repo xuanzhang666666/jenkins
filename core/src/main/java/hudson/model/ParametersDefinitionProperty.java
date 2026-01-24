@@ -157,9 +157,50 @@ public class ParametersDefinitionProperty extends OptionalJobProperty<Job<?, ?>>
             delay = new TimeDuration(TimeUnit.MILLISECONDS.convert(getJob().getQuietPeriod(), TimeUnit.SECONDS));
 
 
-        List<ParameterValue> values = new ArrayList<>();
+        JSONObject formData = req.getSubmittedForm();
+        List<ParameterValue> values = getSubmittedParameters(formData, req);
+
+        WaitingItem item = Jenkins.get().getQueue().schedule(
+                getJob(), delay.getTimeInSeconds(), new ParametersAction(values), new CauseAction(new Cause.UserIdCause()));
+        if (item != null) {
+            String url = formData.optString("redirectTo");
+            if (url == null || !Util.isSafeToRedirectTo(url))   // avoid open redirect
+                url = req.getContextPath() + '/' + item.getUrl();
+            rsp.sendRedirect(formData.optInt("statusCode", SC_CREATED), url);
+        } else
+            // send the user back to the job top page.
+            rsp.sendRedirect(".");
+    }
+
+    public void _doBuild1(StaplerRequest2 req, StaplerResponse2 rsp, @QueryParameter TimeDuration delay, @QueryParameter boolean singleBuild) throws IOException, ServletException {
+        if (delay == null)
+            delay = new TimeDuration(TimeUnit.MILLISECONDS.convert(getJob().getQuietPeriod(), TimeUnit.SECONDS));
 
         JSONObject formData = req.getSubmittedForm();
+        List<ParameterValue> values = getSubmittedParameters(formData, req);
+
+        List<Action> actions = new ArrayList<>();
+        actions.add(new ParametersAction(values));
+        actions.add(new CauseAction(new Cause.UserIdCause()));
+        if (singleBuild) {
+            actions.add(new ParameterizedJobMixIn.SingleBuildInvisibleAction());
+        }
+
+        WaitingItem item = Jenkins.get().getQueue().schedule(getJob(), delay.getTimeInSeconds(), actions.toArray(new Action[0]));
+        if (item != null) {
+            String url = formData.optString("redirectTo");
+            if (url == null || !Util.isSafeToRedirectTo(url))   // avoid open redirect
+                url = req.getContextPath() + '/' + item.getUrl();
+            rsp.sendRedirect(formData.optInt("statusCode", SC_CREATED), url);
+        } else
+            rsp.sendRedirect(".");
+    }
+
+    private List<ParameterValue> getSubmittedParameters(JSONObject formData, StaplerRequest2 req) {
+        List<ParameterValue> values = new ArrayList<>();
+        if (formData == null) {
+            return values;
+        }
         Object parameter = formData.get("parameter");
         if (parameter != null) {
             JSONArray a = JSONArray.fromObject(parameter);
@@ -179,17 +220,7 @@ public class ParametersDefinitionProperty extends OptionalJobProperty<Job<?, ?>>
                 }
             }
         }
-
-        WaitingItem item = Jenkins.get().getQueue().schedule(
-                getJob(), delay.getTimeInSeconds(), new ParametersAction(values), new CauseAction(new Cause.UserIdCause()));
-        if (item != null) {
-            String url = formData.optString("redirectTo");
-            if (url == null || !Util.isSafeToRedirectTo(url))   // avoid open redirect
-                url = req.getContextPath() + '/' + item.getUrl();
-            rsp.sendRedirect(formData.optInt("statusCode", SC_CREATED), url);
-        } else
-            // send the user back to the job top page.
-            rsp.sendRedirect(".");
+        return values;
     }
 
     /** @deprecated use {@link #buildWithParameters(StaplerRequest2, StaplerResponse2, TimeDuration)} */

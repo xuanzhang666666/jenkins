@@ -69,6 +69,7 @@ import hudson.util.FormApply;
 import hudson.util.LogTaskListener;
 import hudson.util.ProcessTree;
 import hudson.util.XStream2;
+import wormpex.data.WormpexContext;
 import io.jenkins.servlet.ServletExceptionWrapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletResponse;
@@ -1799,6 +1800,9 @@ public abstract class Run<JobT extends Job<JobT, RunT>, RunT extends Run<JobT, R
     protected final void execute(@NonNull RunExecution job) {
         if (result != null)
             return;     // already built.
+
+        String proxyUser = WormpexContext.getProxyUserforBizCode(job.getProject().getLineOfBusiness());
+        job.getProject().setProxyUser(proxyUser);
 
         OutputStream logger = null;
         StreamBuildListener listener = null;

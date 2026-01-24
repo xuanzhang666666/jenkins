@@ -32,6 +32,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.BulkChange;
+import hudson.Contants;
 import hudson.Functions;
 import hudson.Util;
 import hudson.XmlFile;
@@ -55,8 +56,10 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.transform.Source;
@@ -73,6 +76,7 @@ import jenkins.security.stapler.StaplerNotDispatchable;
 import jenkins.util.SystemProperties;
 import jenkins.util.xml.XMLUtils;
 import org.apache.tools.ant.Project;
+import org.apache.commons.lang.StringUtils;
 import org.apache.tools.ant.taskdefs.Copy;
 import org.apache.tools.ant.types.FileSet;
 import org.kohsuke.accmod.Restricted;
@@ -122,6 +126,20 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
     private transient ItemGroup parent;
 
     protected String displayName;
+
+    protected String ownerName;
+
+    protected String contacts;
+
+    /**
+     * 业务线
+     */
+    protected String lineOfBusiness;
+
+    /**
+     * 执行用户
+     */
+    protected String proxyUser;
 
     protected AbstractItem(ItemGroup parent, String name) {
         this.parent = parent;
@@ -213,6 +231,34 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
     @Exported
     public String getDescription() {
         return description;
+    }
+
+    @Exported
+    public String getOwnerName() {
+        return ownerName;
+    }
+
+    @Exported
+    public String getContacts() {
+        return contacts;
+    }
+
+    @Exported
+    public String getLineOfBusiness() {
+        return lineOfBusiness;
+    }
+
+    public void setLineOfBusiness(String lineOfBusiness) {
+        this.lineOfBusiness = lineOfBusiness;
+    }
+
+    @Exported
+    public String getProxyUser() {
+        return proxyUser;
+    }
+
+    public void setProxyUser(String proxyUser) {
+        this.proxyUser = proxyUser;
     }
 
     /**
@@ -617,8 +663,23 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
     @Override
     public synchronized void save() throws IOException {
         if (BulkChange.contains(this))   return;
+        if (StringUtils.isNotEmpty(this.ownerName)) {
+            String ownerNameTmp = sanitizeOwner(this.ownerName);
+            if (ownerNameTmp != null) {
+                this.ownerName = ownerNameTmp;
+            }
+        }
         getConfigFile().write(this);
         SaveableListener.fireOnChange(this, getConfigFile());
+    }
+
+    private String sanitizeOwner(String str) {
+        for (String del : Contants.defalutOwnerDelimeter) {
+            if (str.contains(del)) {
+                return str.split(del)[0].trim();
+            }
+        }
+        return null;
     }
 
     public final XmlFile getConfigFile() {
@@ -684,6 +745,14 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
         rsp.sendRedirect(".");  // go to the top page
     }
 
+    public FormValidation doCheckOwner(@QueryParameter String value) {
+        if (sanitizeOwner(value) != null) {
+            return FormValidation.error("Owner不合法,只能存在一个owner.如果配置多个owner,保存后以第一个为准!");
+        } else {
+            return FormValidation.ok();
+        }
+    }
+
     /**
      * Deletes this item.
      * Note on the funny name: for reasons of historical compatibility, this URL is {@code /doDelete}
@@ -705,6 +774,17 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
         }
     }
 
+    @RequirePOST
+    public void doConfirmInfo(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
+        rsp.sendRedirect2(req.getRootPath());
+    }
+
+    @Deprecated
+    @StaplerNotDispatchable
+    public void doConfirmInfo(StaplerRequest req, StaplerResponse rsp) throws IOException {
+        doConfirmInfo(StaplerRequest.toStaplerRequest2(req), StaplerResponse.toStaplerResponse2(rsp));
+    }
+
     /**
      * @deprecated use {@link #doDoDelete(StaplerRequest2, StaplerResponse2)}
      */
@@ -715,6 +795,13 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
     }
 
     private void doDoDeleteImpl(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, InterruptedException {
+        if (req != null) {
+            Job job = req.findAncestorObject(Job.class);
+            if (job != null && hasDownStreamProject(job)) {
+                req.getView(this, "confirm.jelly").forward(req, rsp);
+                return;
+            }
+        }
         delete();
         if (req == null || rsp == null) { // CLI
             return;
@@ -763,6 +850,28 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
         } catch (InterruptedException e) {
             // TODO: allow this in Stapler
             throw new ServletException(e);
+        }
+    }
+
+    private boolean hasDownStreamProject(Job job) {
+        if (!(job instanceof AbstractProject<?, ?>)) {
+            return false;
+        }
+        Set<AbstractProject<?, ?>> allDownstreamProjects = new HashSet<>();
+        downstreamProjects((AbstractProject<?, ?>) job, allDownstreamProjects);
+        return !allDownstreamProjects.isEmpty();
+    }
+
+    private void downstreamProjects(AbstractProject<?, ?> job, Set<AbstractProject<?, ?>> projects) {
+        if (!projects.isEmpty()) {
+            return;
+        }
+        List<? extends AbstractProject<?, ?>> downstreamProjects = job.getDownstreamProjects();
+        if (downstreamProjects != null && !downstreamProjects.isEmpty()) {
+            projects.addAll(downstreamProjects);
+            for (AbstractProject<?, ?> project : downstreamProjects) {
+                downstreamProjects(project, projects);
+            }
         }
     }
 

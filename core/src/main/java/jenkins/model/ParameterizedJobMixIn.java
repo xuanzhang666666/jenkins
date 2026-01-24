@@ -39,6 +39,7 @@ import hudson.model.BuildAuthorizationToken;
 import hudson.model.BuildableItem;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
+import hudson.model.InvisibleAction;
 import hudson.model.Item;
 import hudson.model.Items;
 import hudson.model.Job;
@@ -229,6 +230,52 @@ public abstract class ParameterizedJobMixIn<JobT extends Job<JobT, RunT> & Param
         Queue.Item item = Jenkins.get().getQueue().schedule2(asJob(), delay.getTimeInSeconds(), getBuildCause(asJob(), req)).getItem();
         if (item != null) {
             // TODO JENKINS-66105 use SC_SEE_OTHER if !ScheduleResult.created
+            rsp.sendRedirect(SC_CREATED, req.getContextPath() + '/' + item.getUrl());
+        } else {
+            rsp.sendRedirect(".");
+        }
+    }
+
+    public static class SingleBuildInvisibleAction extends InvisibleAction {
+    }
+
+    /**
+     * Generates a build through the single-build pathway.
+     */
+    public final void doBuild1(StaplerRequest2 req, StaplerResponse2 rsp, @QueryParameter TimeDuration delay, @QueryParameter boolean singleBuild) throws IOException, ServletException {
+        if (delay == null) {
+            delay = new TimeDuration(TimeUnit.MILLISECONDS.convert(asJob().getQuietPeriod(), TimeUnit.SECONDS));
+        }
+
+        if (!asJob().isBuildable()) {
+            throw HttpResponses.errorWithoutStack(SC_CONFLICT, asJob().getFullName() + " is not buildable");
+        }
+
+        ParametersDefinitionProperty pp = asJob().getProperty(ParametersDefinitionProperty.class);
+        if (pp != null && !req.getMethod().equals("POST")) {
+            req.getView(pp, "index.jelly").forward(req, rsp);
+            return;
+        }
+
+        BuildAuthorizationToken.checkPermission(asJob(), asJob().getAuthToken(), req, rsp);
+
+        if (pp != null) {
+            if (singleBuild) {
+                pp._doBuild1(req, rsp, delay, singleBuild);
+            } else {
+                pp._doBuild(req, rsp, delay);
+            }
+            return;
+        }
+
+        Queue.Item item;
+        if (singleBuild) {
+            item = Jenkins.get().getQueue().schedule2(asJob(), delay.getTimeInSeconds(), getBuildCause(asJob(), req), new SingleBuildInvisibleAction()).getItem();
+        } else {
+            item = Jenkins.get().getQueue().schedule2(asJob(), delay.getTimeInSeconds(), getBuildCause(asJob(), req)).getItem();
+        }
+
+        if (item != null) {
             rsp.sendRedirect(SC_CREATED, req.getContextPath() + '/' + item.getUrl());
         } else {
             rsp.sendRedirect(".");

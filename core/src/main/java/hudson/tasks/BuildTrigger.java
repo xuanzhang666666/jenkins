@@ -43,21 +43,29 @@ import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Items;
 import hudson.model.Job;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Project;
 import hudson.model.Result;
 import hudson.model.Run;
+import hudson.model.SimpleParameterDefinition;
 import hudson.model.TaskListener;
 import hudson.model.listeners.ItemListener;
 import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.util.FormValidation;
+import hudson.util.Lists;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.StringTokenizer;
 import java.util.concurrent.ExecutionException;
@@ -67,6 +75,8 @@ import java.util.logging.Logger;
 import jenkins.model.DependencyDeclarer;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
+import jenkins.security.QueueItemAuthenticatorConfiguration;
+import jenkins.security.QueueItemAuthenticatorDescriptor;
 import jenkins.triggers.ReverseBuildTrigger;
 import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
@@ -286,28 +296,85 @@ public class BuildTrigger extends Recorder implements DependencyDeclarer {
             }
         });
 
-        for (Dependency dep : downstreamProjects) {
-            List<Action> buildActions = new ArrayList<>();
-            if (dep.shouldTriggerBuild(build, listener, buildActions)) {
-                AbstractProject p = dep.getDownstreamProject();
-                // Allow shouldTriggerBuild to return false first, in case it is skipping because of a lack of Item.READ/DISCOVER permission:
-                if (p.isDisabled()) {
-                    logger.println(Messages.BuildTrigger_Disabled(ModelHyperlinkNote.encodeTo(p)));
-                    continue;
+        Authentication auth = Jenkins.getAuthentication2(); // from build
+        if (auth.equals(ACL.SYSTEM2)) {
+            if (QueueItemAuthenticatorDescriptor.all().isEmpty()) {
+                if (downstreamProjects.isEmpty()) {
+                    return true;
                 }
-                boolean scheduled = p.scheduleBuild(p.getQuietPeriod(), new UpstreamCause((Run) build), buildActions.toArray(new Action[0]));
-                if (Jenkins.get().getItemByFullName(p.getFullName()) == p) {
-                    String name = ModelHyperlinkNote.encodeTo(p);
-                    if (scheduled) {
-                        logger.println(Messages.BuildTrigger_Triggering(name));
-                    } else {
-                        logger.println(Messages.BuildTrigger_InQueue(name));
-                    }
-                } // otherwise upstream users should not know that it happened
+                logger.println(Messages.BuildTrigger_warning_you_have_no_plugins_providing_ac());
+            } else if (QueueItemAuthenticatorConfiguration.get().getAuthenticators().isEmpty()) {
+                if (downstreamProjects.isEmpty()) {
+                    return true;
+                }
+                logger.println(Messages.BuildTrigger_warning_access_control_for_builds_in_glo());
+            } else {
+                logger.println(Messages.BuildTrigger_warning_this_build_has_no_associated_aut());
+                auth = Jenkins.ANONYMOUS2;
             }
+        }
+        try {
+            shouldWormpexTrigger(graph, auth, build, listener, downstreamProjects);
+        } catch (Exception e) {
+            LOGGER.error("shouldWormpexTrigger_error:", e);
+            logger.println("shouldWormpexTrigger_error:" + e.getMessage());
         }
 
         return true;
+    }
+
+    public static void shouldWormpexTrigger(DependencyGraph graph, Authentication auth, AbstractBuild build, BuildListener listener, List<Dependency> downstreamProjects) {
+        PrintStream logger = listener.getLogger();
+        for (Dependency dep : downstreamProjects) {
+            List<Action> buildActions = new ArrayList<>();
+            try (ACLContext ignored = ACL.impersonate2(auth)) {
+                ParametersAction upParametersAction = build.getAction(ParametersAction.class);
+                Map<String, ParameterValue> upParameterValueContext = new HashMap<>();
+                List<ParameterValue> upActionParameters = new ArrayList<>();
+                if (upParametersAction != null) {
+                    upActionParameters.addAll(upParametersAction.getParameters());
+                    for (ParameterValue p : upActionParameters) {
+                        upParameterValueContext.put(p.getName(), p);
+                    }
+                }
+                AbstractProject<?, ?> p = dep.getDownstreamProject();
+                boolean parameterized = p.isParameterized();
+                List<ParameterValue> parameters = new ArrayList<>();
+                if (parameterized) {
+                    ParametersDefinitionProperty parameterProperties = p.getProperty(ParametersDefinitionProperty.class);
+                    if (parameterProperties != null) {
+                        for (ParameterDefinition parameterDefinition : parameterProperties.getParameterDefinitions()) {
+                            if (parameterDefinition instanceof SimpleParameterDefinition) {
+                                SimpleParameterDefinition spdn = (SimpleParameterDefinition) parameterDefinition;
+                                String parameterName = spdn.getName();
+                                if (upParameterValueContext.containsKey(parameterName)) {
+                                    parameters.add(upParameterValueContext.get(parameterName));
+                                } else {
+                                    parameters.add(spdn.getDefaultParameterValue());
+                                }
+                            }
+                        }
+                    }
+                }
+                ParametersAction finalDownparametersAction = new ParametersAction(Lists.newArrayList(parameters));
+                buildActions.add(finalDownparametersAction);
+                if (dep.shouldTriggerBuild(build, listener, buildActions)) {
+                    if (p.isDisabled()) {
+                        logger.println(Messages.BuildTrigger_Disabled(ModelHyperlinkNote.encodeTo(p)));
+                        continue;
+                    }
+                    boolean scheduled = p.scheduleBuild(p.getQuietPeriod(), new UpstreamCause((Run) build), buildActions.toArray(new Action[0]));
+                    if (Jenkins.get().getItemByFullName(p.getFullName()) == p) {
+                        String name = ModelHyperlinkNote.encodeTo(p);
+                        if (scheduled) {
+                            logger.println(Messages.BuildTrigger_Triggering(name));
+                        } else {
+                            logger.println(Messages.BuildTrigger_InQueue(name));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Override

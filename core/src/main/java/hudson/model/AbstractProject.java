@@ -77,6 +77,7 @@ import hudson.util.AlternativeUiTextProvider;
 import hudson.util.AlternativeUiTextProvider.Message;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import io.jenkins.servlet.ServletExceptionWrapper;
 import jakarta.servlet.ServletException;
 import java.io.File;
@@ -110,6 +111,7 @@ import jenkins.scm.SCMDecisionHandler;
 import jenkins.triggers.SCMTriggerItem;
 import jenkins.util.TimeDuration;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -119,6 +121,7 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.ForwardToView;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerRequest2;
@@ -127,6 +130,7 @@ import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 import org.kohsuke.stapler.verb.POST;
+import wormpex.data.WormpexContext;
 
 /**
  * Base implementation of {@link Job}s that build software.
@@ -1739,6 +1743,81 @@ public abstract class AbstractProject<P extends AbstractProject<P, R>, R extends
         }
     }
 
+    public void doBuild1(StaplerRequest2 req, StaplerResponse2 rsp, @QueryParameter TimeDuration delay, @QueryParameter boolean singleBuild) throws IOException, ServletException {
+        getParameterizedJobMixIn().doBuild1(req, rsp, delay, singleBuild);
+    }
+
+    @Deprecated
+    public void doBuild1(StaplerRequest req, StaplerResponse rsp) throws IOException, javax.servlet.ServletException {
+        try {
+            doBuild1(StaplerRequest.toStaplerRequest2(req), StaplerResponse.toStaplerResponse2(rsp), TimeDuration.fromString(req.getParameter("delay")), Boolean.parseBoolean(req.getParameter("singleBuild")));
+        } catch (ServletException e) {
+            throw ServletExceptionWrapper.fromJakartaServletException(e);
+        }
+    }
+
+    @RequirePOST
+    public HttpResponse doDisable(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
+        checkPermission(CONFIGURE);
+        if (hasDownStreamProject((Job) this)) {
+            req.getView(this, "disable.jelly").forward(req, rsp);
+        } else {
+            makeDisabled(true);
+        }
+        return HttpResponses.redirectToDot();
+    }
+
+    @Deprecated
+    public HttpResponse doDisable(StaplerRequest req, StaplerResponse rsp) throws IOException, javax.servlet.ServletException {
+        try {
+            return doDisable(StaplerRequest.toStaplerRequest2(req), StaplerResponse.toStaplerResponse2(rsp));
+        } catch (ServletException e) {
+            throw ServletExceptionWrapper.fromJakartaServletException(e);
+        }
+    }
+
+    @RequirePOST
+    public HttpResponse doEnable(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
+        checkPermission(CONFIGURE);
+        if (hasDownStreamProject((Job) this)) {
+            req.getView(this, "enable.jelly").forward(req, rsp);
+        } else {
+            makeDisabled(false);
+        }
+        return HttpResponses.redirectToDot();
+    }
+
+    @Deprecated
+    public HttpResponse doEnable(StaplerRequest req, StaplerResponse rsp) throws IOException, javax.servlet.ServletException {
+        try {
+            return doEnable(StaplerRequest.toStaplerRequest2(req), StaplerResponse.toStaplerResponse2(rsp));
+        } catch (ServletException e) {
+            throw ServletExceptionWrapper.fromJakartaServletException(e);
+        }
+    }
+
+    @RequirePOST
+    public HttpResponse doSysDisableJob() throws IOException {
+        checkPermission(CONFIGURE);
+        makeDisabled(true);
+        return HttpResponses.redirectToDot();
+    }
+
+    @RequirePOST
+    public HttpResponse doSysEnableJob() throws IOException {
+        checkPermission(CONFIGURE);
+        makeDisabled(false);
+        return HttpResponses.redirectToDot();
+    }
+
+    private boolean hasDownStreamProject(Job job) {
+        if (!(job instanceof AbstractProject<?, ?>)) {
+            return false;
+        }
+        AbstractItem item = (AbstractItem) job;
+        return item.hasDownStreamProject(job);
+    }
+
     /**
      * Computes the delay by taking the default value and the override in the request parameter into the account.
      *
@@ -2018,6 +2097,23 @@ public abstract class AbstractProject<P extends AbstractProject<P, R>, R extends
                 candidates.add(job.getFullName());
             }
             return candidates;
+        }
+
+        public ListBoxModel doFillLineOfBusinessItems(@QueryParameter("lineOfBusiness") String lineOfBusiness) {
+            ListBoxModel items = new ListBoxModel();
+            for (wormpex.data.util.Pair code : WormpexContext.getBizCodes()) {
+                items.add(new ListBoxModel.Option(code.getLeft(), code.getRight(), 
+                    StringUtils.isEmpty(lineOfBusiness) ? false : lineOfBusiness.matches(code.getRight())));
+            }
+            return items;
+        }
+
+        public FormValidation doCheckLineOfBusiness() {
+            if (!WormpexContext.getBizCodes().isEmpty()) {
+                return FormValidation.ok();
+            } else {
+                return FormValidation.error("biz Code不能为空,请在dmp中配置业务线!!!");
+            }
         }
 
         @Restricted(DoNotUse.class)
