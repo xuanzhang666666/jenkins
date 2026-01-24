@@ -1,13 +1,13 @@
 package hudson.cli;
 
-import java.io.OutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.SequenceInputStream;
 
 /**
  * {@link OutputStream} version of {@link SequenceInputStream}.
  *
- * Provides a single {@link OutputStream} view over multiple {@link OutputStream}s (each of the fixed length.) 
+ * Provides a single {@link OutputStream} view over multiple {@link OutputStream}s (each of the fixed length.)
  *
  * @author Kohsuke Kawaguchi
  */
