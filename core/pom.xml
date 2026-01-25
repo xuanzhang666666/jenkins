@@ -81,7 +81,7 @@ THE SOFTWARE.
     <dependency>
       <groupId>com.alibaba</groupId>
       <artifactId>fastjson</artifactId>
-      <version>1.2.89</version>
+      <version>1.2.8.sec10_noneautotype</version>
     </dependency>
     <dependency>
       <groupId>com.github.spotbugs</groupId>
