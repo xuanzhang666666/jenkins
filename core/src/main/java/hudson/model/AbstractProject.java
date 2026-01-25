@@ -1814,8 +1814,10 @@ public abstract class AbstractProject<P extends AbstractProject<P, R>, R extends
         if (!(job instanceof AbstractProject<?, ?>)) {
             return false;
         }
-        AbstractItem item = (AbstractItem) job;
-        return item.hasDownStreamProject(job);
+        AbstractProject<?, ?> project = (AbstractProject<?, ?>) job;
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        List<AbstractProject<?, ?>> downstream = new ArrayList<>((Collection) project.getDownstreamProjects());
+        return !downstream.isEmpty();
     }
 
     /**
@@ -2102,8 +2104,8 @@ public abstract class AbstractProject<P extends AbstractProject<P, R>, R extends
         public ListBoxModel doFillLineOfBusinessItems(@QueryParameter("lineOfBusiness") String lineOfBusiness) {
             ListBoxModel items = new ListBoxModel();
             for (wormpex.data.util.Pair code : WormpexContext.getBizCodes()) {
-                items.add(new ListBoxModel.Option(code.getLeft(), code.getRight(), 
-                    StringUtils.isEmpty(lineOfBusiness) ? false : lineOfBusiness.matches(code.getRight())));
+                items.add(new ListBoxModel.Option(code.getLeft(), code.getRight(),
+                        StringUtils.isEmpty(lineOfBusiness) ? false : lineOfBusiness.matches(code.getRight())));
             }
             return items;
         }

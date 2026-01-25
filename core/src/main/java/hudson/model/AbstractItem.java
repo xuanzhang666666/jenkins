@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -75,8 +76,8 @@ import jenkins.security.ExtendedReadRedaction;
 import jenkins.security.stapler.StaplerNotDispatchable;
 import jenkins.util.SystemProperties;
 import jenkins.util.xml.XMLUtils;
-import org.apache.tools.ant.Project;
 import org.apache.commons.lang.StringUtils;
+import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.Copy;
 import org.apache.tools.ant.types.FileSet;
 import org.kohsuke.accmod.Restricted;
@@ -764,11 +765,7 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
     @RequirePOST
     public void doDoDelete(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException, InterruptedException {
         if (Util.isOverridden(AbstractItem.class, getClass(), "doDoDelete", StaplerRequest.class, StaplerResponse.class)) {
-            try {
-                doDoDelete(StaplerRequest.fromStaplerRequest2(req), StaplerResponse.fromStaplerResponse2(rsp));
-            } catch (javax.servlet.ServletException e) {
-                throw ServletExceptionWrapper.toJakartaServletException(e);
-            }
+            doDoDelete(StaplerRequest.fromStaplerRequest2(req), StaplerResponse.fromStaplerResponse2(rsp));
         } else {
             doDoDeleteImpl(req, rsp);
         }
@@ -790,11 +787,11 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
      */
     @Deprecated
     @StaplerNotDispatchable
-    public void doDoDelete(StaplerRequest req, StaplerResponse rsp) throws IOException, javax.servlet.ServletException, InterruptedException {
+    public void doDoDelete(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, InterruptedException {
         doDoDeleteImpl(StaplerRequest.toStaplerRequest2(req), StaplerResponse.toStaplerResponse2(rsp));
     }
 
-    private void doDoDeleteImpl(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, InterruptedException {
+    private void doDoDeleteImpl(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, InterruptedException, ServletException {
         if (req != null) {
             Job job = req.findAncestorObject(Job.class);
             if (job != null && hasDownStreamProject(job)) {
@@ -866,10 +863,11 @@ public abstract class AbstractItem extends Actionable implements Loadable, Item,
         if (!projects.isEmpty()) {
             return;
         }
-        List<? extends AbstractProject<?, ?>> downstreamProjects = job.getDownstreamProjects();
-        if (downstreamProjects != null && !downstreamProjects.isEmpty()) {
-            projects.addAll(downstreamProjects);
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        List<AbstractProject<?, ?>> downstreamProjects = new ArrayList<>((Collection) job.getDownstreamProjects());
+        if (!downstreamProjects.isEmpty()) {
             for (AbstractProject<?, ?> project : downstreamProjects) {
+                projects.add(project);
                 downstreamProjects(project, projects);
             }
         }

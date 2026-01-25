@@ -30,7 +30,6 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Functions;
 import hudson.Util;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.PersistentDescriptor;
 import hudson.remoting.VirtualChannel;
@@ -151,9 +150,7 @@ public class Shell extends CommandInterpreter {
 
     @Override
     public boolean perform(hudson.model.AbstractBuild<?, ?> build, hudson.Launcher launcher, hudson.model.TaskListener listener) throws InterruptedException {
-        if (build.getProject() instanceof AbstractProject) {
-            this.currentProject = (AbstractProject<?, ?>) build.getProject();
-        }
+        this.currentProject = (AbstractProject<?, ?>) build.getProject();
         try {
             return super.perform(build, launcher, listener);
         } finally {

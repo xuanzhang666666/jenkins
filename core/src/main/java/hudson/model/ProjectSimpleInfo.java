@@ -1,9 +1,8 @@
 package hudson.model;
 
+import java.util.Objects;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
-
-import java.util.Objects;
 
 @ExportedBean
 public class ProjectSimpleInfo {

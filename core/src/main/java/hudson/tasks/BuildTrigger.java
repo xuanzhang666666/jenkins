@@ -24,6 +24,7 @@
 
 package hudson.tasks;
 
+import com.google.common.collect.Lists;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -57,7 +58,6 @@ import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.util.FormValidation;
-import hudson.util.Lists;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -302,21 +302,21 @@ public class BuildTrigger extends Recorder implements DependencyDeclarer {
                 if (downstreamProjects.isEmpty()) {
                     return true;
                 }
-                logger.println(Messages.BuildTrigger_warning_you_have_no_plugins_providing_ac());
+                logger.println("No queue item authenticator plugins configured; downstream will run as SYSTEM.");
             } else if (QueueItemAuthenticatorConfiguration.get().getAuthenticators().isEmpty()) {
                 if (downstreamProjects.isEmpty()) {
                     return true;
                 }
-                logger.println(Messages.BuildTrigger_warning_access_control_for_builds_in_glo());
+                logger.println("Queue item authentication is globally enabled but no authenticators are configured; downstream will run as SYSTEM.");
             } else {
-                logger.println(Messages.BuildTrigger_warning_this_build_has_no_associated_aut());
+                logger.println("This build has no associated authentication; using anonymous for downstream scheduling.");
                 auth = Jenkins.ANONYMOUS2;
             }
         }
         try {
             shouldWormpexTrigger(graph, auth, build, listener, downstreamProjects);
         } catch (Exception e) {
-            LOGGER.error("shouldWormpexTrigger_error:", e);
+            LOGGER.log(Level.SEVERE, "shouldWormpexTrigger_error:", e);
             logger.println("shouldWormpexTrigger_error:" + e.getMessage());
         }
 
@@ -327,7 +327,7 @@ public class BuildTrigger extends Recorder implements DependencyDeclarer {
         PrintStream logger = listener.getLogger();
         for (Dependency dep : downstreamProjects) {
             List<Action> buildActions = new ArrayList<>();
-            try (ACLContext ignored = ACL.impersonate2(auth)) {
+            try (ACLContext ignored = ACL.as2(auth)) {
                 ParametersAction upParametersAction = build.getAction(ParametersAction.class);
                 Map<String, ParameterValue> upParameterValueContext = new HashMap<>();
                 List<ParameterValue> upActionParameters = new ArrayList<>();

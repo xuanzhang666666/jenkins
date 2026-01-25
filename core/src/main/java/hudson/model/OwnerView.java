@@ -1,14 +1,13 @@
 package hudson.model;
 
 import hudson.Extension;
-import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.Symbol;
-import org.kohsuke.stapler.DataBoundConstructor;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.Symbol;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 public class OwnerView extends MyView {
 
