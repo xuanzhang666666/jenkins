@@ -25,7 +25,14 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form" xmlns:l="/lib/layout">
   <j:set var="delay" value="${request2.getParameter('delay')}" />
-  <f:form method="post" action="build${empty(delay)?'':'?delay='+delay}" name="parameters"
+  <j:set var="singleBuild" value="${request2.getParameter('singleBuild')}" />
+  <j:set var="action" value="build${empty(delay)?'':'?delay='+delay}" />
+  
+  <j:if test="${singleBuild == 'true'}">
+    <j:set var="action" value="build1${empty(delay)?'':'?delay='+delay}&amp;singleBuild=true" />
+  </j:if>
+  
+  <f:form method="post" action="${action}" name="parameters"
           tableClass="parameters" class="jenkins-form">
     <j:forEach var="parameterDefinition" items="${it.parameterDefinitions}">
       <j:set var="escapeEntryTitleAndDescription" value="true"/> <!-- SECURITY-353 defense unless overridden -->
