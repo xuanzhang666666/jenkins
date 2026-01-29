@@ -50,7 +50,7 @@ import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.CategoryDataset;
-import org.jfree.ui.RectangleInsets;
+import org.jfree.chart.ui.RectangleInsets;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
@@ -206,7 +206,7 @@ public abstract class LoadStatistics {
         plot.setRangeGridlinePaint(Color.black);
 
         final LineAndShapeRenderer renderer = (LineAndShapeRenderer) plot.getRenderer();
-        renderer.setBaseStroke(new BasicStroke(3));
+        renderer.setDefaultStroke(new BasicStroke(3));
         configureRenderer(renderer);
 
         final CategoryAxis domainAxis = new NoOverlapCategoryAxis(null);

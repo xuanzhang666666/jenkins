@@ -127,6 +127,11 @@ THE SOFTWARE.
         <version>2.6</version>
       </dependency>
       <dependency>
+        <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
+        <artifactId>owasp-java-html-sanitizer</artifactId>
+        <version>20240325.1</version>
+      </dependency>
+      <dependency>
         <groupId>jakarta.servlet</groupId>
         <artifactId>jakarta.servlet-api</artifactId>
         <version>5.0.0</version>
@@ -202,6 +207,11 @@ THE SOFTWARE.
         <version>${commons-fileupload2.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.18.0</version>
+      </dependency>
+      <dependency>
         <groupId>org.codehaus.groovy</groupId>
         <artifactId>groovy-all</artifactId>
         <version>${groovy.version}</version>
@@ -270,7 +280,7 @@ THE SOFTWARE.
       <dependency>
         <groupId>org.jfree</groupId>
         <artifactId>jfreechart</artifactId>
-        <version>1.0.19</version>
+        <version>1.5.5</version>
       </dependency>
       <dependency>
         <groupId>org.jvnet.hudson</groupId>

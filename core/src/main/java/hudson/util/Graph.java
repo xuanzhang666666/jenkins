@@ -40,7 +40,7 @@ import javax.imageio.ImageIO;
 import jenkins.security.stapler.StaplerNotDispatchable;
 import jenkins.util.SystemProperties;
 import org.jfree.chart.ChartRenderingInfo;
-import org.jfree.chart.ChartUtilities;
+import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.Plot;
 import org.kohsuke.accmod.Restricted;
@@ -253,6 +253,6 @@ public abstract class Graph {
         render(req, info);
 
         rsp.setContentType("text/plain;charset=UTF-8");
-        rsp.getWriter().println(ChartUtilities.getImageMap("map", info));
+        rsp.getWriter().println(ChartUtils.getImageMap("map", info));
     }
 }

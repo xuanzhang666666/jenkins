@@ -36,9 +36,9 @@ import org.jfree.chart.axis.CategoryTick;
 import org.jfree.chart.entity.CategoryLabelEntity;
 import org.jfree.chart.entity.EntityCollection;
 import org.jfree.chart.plot.PlotRenderingInfo;
-import org.jfree.text.TextBlock;
-import org.jfree.ui.RectangleAnchor;
-import org.jfree.ui.RectangleEdge;
+import org.jfree.chart.text.TextBlock;
+import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.chart.ui.RectangleEdge;
 
 /**
  * This class implements X-axis label skipping algorithm to
@@ -115,8 +115,7 @@ public class NoOverlapCategoryAxis extends CategoryAxis {
                 Rectangle2D area = new Rectangle2D.Double(x0, y0, x1 - x0,
                         y1 - y0);
                 if (r == null || !r.intersects(area)) {
-                    Point2D anchorPoint = RectangleAnchor.coordinates(area,
-                            position.getCategoryAnchor());
+                    Point2D anchorPoint = position.getCategoryAnchor().getAnchorPoint(area);
                     TextBlock block = tick.getLabel();
                     block.draw(g2, (float) anchorPoint.getX(),
                             (float) anchorPoint.getY(), position.getLabelAnchor(),

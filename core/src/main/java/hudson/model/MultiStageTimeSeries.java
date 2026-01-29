@@ -49,7 +49,7 @@ import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
-import org.jfree.ui.RectangleInsets;
+import org.jfree.chart.ui.RectangleInsets;
 import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.StaplerRequest;
@@ -280,7 +280,7 @@ public class MultiStageTimeSeries implements Serializable {
         }
 
         protected void configureRenderer(LineAndShapeRenderer renderer) {
-            renderer.setBaseStroke(new BasicStroke(3));
+            renderer.setDefaultStroke(new BasicStroke(3));
 
             for (int i = 0; i < series.size(); i++)
                 renderer.setSeriesPaint(i, series.get(i).color);

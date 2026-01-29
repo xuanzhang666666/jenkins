@@ -26,7 +26,7 @@ package hudson.util;
 
 import java.awt.geom.Rectangle2D;
 import org.jfree.chart.axis.CategoryAxis;
-import org.jfree.ui.RectangleEdge;
+import org.jfree.chart.ui.RectangleEdge;
 
 /**
  * {@link CategoryAxis} shifted to left to eliminate redundant space

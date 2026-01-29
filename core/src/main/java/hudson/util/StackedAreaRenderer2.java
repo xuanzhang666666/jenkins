@@ -38,7 +38,7 @@ import org.jfree.chart.renderer.category.CategoryItemRendererState;
 import org.jfree.chart.renderer.category.StackedAreaRenderer;
 import org.jfree.chart.urls.CategoryURLGenerator;
 import org.jfree.data.category.CategoryDataset;
-import org.jfree.ui.RectangleEdge;
+import org.jfree.chart.ui.RectangleEdge;
 
 /**
  * Modified {@link StackedAreaRenderer}.
@@ -60,8 +60,8 @@ public class StackedAreaRenderer2 extends StackedAreaRenderer
 
     public StackedAreaRenderer2() {
         setEndType(AreaRendererEndType.TRUNCATE);
-        setItemURLGenerator(this);
-        setToolTipGenerator(this);
+        setDefaultItemURLGenerator(this);
+        setDefaultToolTipGenerator(this);
     }
 
     /**
@@ -115,7 +115,7 @@ public class StackedAreaRenderer2 extends StackedAreaRenderer
         double xx1 = domainAxis.getCategoryMiddle(column, getColumnCount(),
                 dataArea, plot.getDomainAxisEdge());
 
-        double previousHeightx1 = getPreviousHeight(dataset, row, column);
+        double previousHeightx1 = calculatePreviousHeight(dataset, row, column);
         double y1 = value + previousHeightx1;
         RectangleEdge location = plot.getRangeAxisEdge();
         double yy1 = rangeAxis.valueToJava2D(y1, dataArea, location);
@@ -147,7 +147,7 @@ public class StackedAreaRenderer2 extends StackedAreaRenderer
 
                 // Get the previous height, but this will be different for both
                 // y0 and y1 as the previous series values could differ.
-                double previousHeightx0 = getPreviousHeight(dataset, row,
+                double previousHeightx0 = calculatePreviousHeight(dataset, row,
                         column - 1);
 
                 // Now stack the current y values on top of the previous values.
@@ -198,5 +198,21 @@ public class StackedAreaRenderer2 extends StackedAreaRenderer
                 }
             }
         }
+    }
+
+    /**
+     * Calculate the previous height for stacking.
+     * This replaces the removed getPreviousHeight() method by using getStackValues().
+     */
+    private double calculatePreviousHeight(CategoryDataset dataset, int series, int index) {
+        // Create an array of valid row indices (all series before the current one)
+        int[] validRows = new int[series];
+        for (int i = 0; i < series; i++) {
+            validRows[i] = i;
+        }
+        double[] stackValues = getStackValues(dataset, series, index, validRows);
+        // stackValues[0] is negative base, stackValues[1] is positive base
+        // For most cases, we need the positive base (cumulative height of previous series)
+        return stackValues[1];
     }
 }
