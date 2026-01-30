@@ -226,7 +226,7 @@ THE SOFTWARE.
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>antisamy-markup-formatter</artifactId>
-      <version>173.v680e3a_b_69ff3</version>
+      <version>173.v680e3a_b_wormpex</version>
       <scope>test</scope>
     </dependency>
     <dependency>
