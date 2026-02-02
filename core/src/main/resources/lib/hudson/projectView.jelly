@@ -66,6 +66,10 @@ THE SOFTWARE.
         <d:invokeBody/>
       </div>
 
+      <div>
+        <b><span style="padding-left: 5px;">Total Jobs: ${jobs.size()}</span></b>
+      </div>
+
       <div class="jenkins-mobile-hide">
         <div class="app-project-status-table">
           <table id="projectstatus" class="jenkins-table ${iconSize == '16x16' ? 'jenkins-table--small' : iconSize == '24x24' ? 'jenkins-table--medium' : ''} sortable">
@@ -80,10 +84,91 @@ THE SOFTWARE.
               </tr>
             </thead>
 
-            <j:forEach var="job" items="${jobs}">
-              <j:set var="relativeLinkToJob" value="${h.getRelativeLinkTo(job)}"/>
-              <t:projectViewRow jobBaseUrl="${relativeLinkToJob.substring(0, relativeLinkToJob.length() - job.shortUrl.length())}"/>
-            </j:forEach>
+            <!-- 当任务数小于200时不分页 -->
+            <j:if test="${jobs.size() lt 200}">
+              <tbody>
+                <j:forEach var="job" items="${jobs}">
+                  <j:set var="relativeLinkToJob" value="${h.getRelativeLinkTo(job)}"/>
+                  <t:projectViewRow jobBaseUrl="${relativeLinkToJob.substring(0, relativeLinkToJob.length() - job.shortUrl.length())}"/>
+                </j:forEach>
+              </tbody>
+            </j:if>
+
+            <!-- 当任务在200 -> 2000区间时，分成两页 -->
+            <j:if test="${jobs.size() ge 200 and jobs.size() lt 2000}">
+              <tbody>
+                <j:set var="job_first" value="${h.subCollection(jobs,0,200)}"/>
+                <j:forEach var="job" items="${job_first}">
+                  <j:set var="relativeLinkToJob" value="${h.getRelativeLinkTo(job)}"/>
+                  <t:projectViewRow jobBaseUrl="${relativeLinkToJob.substring(0, relativeLinkToJob.length() - job.shortUrl.length())}"/>
+                </j:forEach>
+              </tbody>
+              <tbody class="jenkins-pagination-more">
+                <j:set var="paginationId" value="${h.generateId()}"/>
+                <tr>
+                  <td colspan="999" style="text-align: center; padding: 10px;">
+                    <button type="button" class="jenkins-button" onclick="document.getElementById('${paginationId}').style.display=''; this.parentElement.parentElement.style.display='none';">
+                      显示201-${jobs.size()}
+                      <svg class="jenkins-icon" width="16" height="16" viewBox="0 0 16 16"><path d="M8 11L3 6h10z"/></svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+              <tbody id="${paginationId}" style="display: none;">
+                <j:set var="job_second" value="${h.subCollection(jobs,200)}"/>
+                <j:forEach var="job" items="${job_second}">
+                  <j:set var="relativeLinkToJob" value="${h.getRelativeLinkTo(job)}"/>
+                  <t:projectViewRow jobBaseUrl="${relativeLinkToJob.substring(0, relativeLinkToJob.length() - job.shortUrl.length())}"/>
+                </j:forEach>
+              </tbody>
+            </j:if>
+
+            <!-- 当任务大于2000时，分成3页 -->
+            <j:if test="${jobs.size() ge 2000}">
+              <tbody>
+                <j:set var="job_first" value="${h.subCollection(jobs,0,200)}"/>
+                <j:forEach var="job" items="${job_first}">
+                  <j:set var="relativeLinkToJob" value="${h.getRelativeLinkTo(job)}"/>
+                  <t:projectViewRow jobBaseUrl="${relativeLinkToJob.substring(0, relativeLinkToJob.length() - job.shortUrl.length())}"/>
+                </j:forEach>
+              </tbody>
+              <tbody class="jenkins-pagination-more" id="seeMoreBtn1">
+                <j:set var="paginationId1" value="${h.generateId()}"/>
+                <j:set var="paginationId2" value="${h.generateId()}"/>
+                <tr>
+                  <td colspan="999" style="text-align: center; padding: 10px;">
+                    <button type="button" class="jenkins-button" onclick="document.getElementById('${paginationId1}').style.display=''; document.getElementById('seeMoreBtn2').style.display=''; this.parentElement.parentElement.style.display='none';">
+                      显示201-2000
+                      <svg class="jenkins-icon" width="16" height="16" viewBox="0 0 16 16"><path d="M8 11L3 6h10z"/></svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+              <tbody id="${paginationId1}" style="display: none;">
+                <j:set var="job_second" value="${h.subCollection(jobs,200,2000)}"/>
+                <j:forEach var="job" items="${job_second}">
+                  <j:set var="relativeLinkToJob" value="${h.getRelativeLinkTo(job)}"/>
+                  <t:projectViewRow jobBaseUrl="${relativeLinkToJob.substring(0, relativeLinkToJob.length() - job.shortUrl.length())}"/>
+                </j:forEach>
+              </tbody>
+              <tbody class="jenkins-pagination-more" id="seeMoreBtn2" style="display: none;">
+                <tr>
+                  <td colspan="999" style="text-align: center; padding: 10px;">
+                    <button type="button" class="jenkins-button" onclick="document.getElementById('${paginationId2}').style.display=''; this.parentElement.parentElement.style.display='none';">
+                      显示2001-${jobs.size()}
+                      <svg class="jenkins-icon" width="16" height="16" viewBox="0 0 16 16"><path d="M8 11L3 6h10z"/></svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+              <tbody id="${paginationId2}" style="display: none;">
+                <j:set var="job_third" value="${h.subCollection(jobs,2000)}"/>
+                <j:forEach var="job" items="${job_third}">
+                  <j:set var="relativeLinkToJob" value="${h.getRelativeLinkTo(job)}"/>
+                  <t:projectViewRow jobBaseUrl="${relativeLinkToJob.substring(0, relativeLinkToJob.length() - job.shortUrl.length())}"/>
+                </j:forEach>
+              </tbody>
+            </j:if>
           </table>
         </div>
 

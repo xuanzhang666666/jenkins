@@ -620,6 +620,34 @@ public class Functions {
     }
 
     /**
+     * Returns a sub-collection of TopLevelItems from the given start index to the end.
+     * Used for pagination in project views.
+     * @param jobs the collection of jobs
+     * @param start the start index (inclusive)
+     * @return a sub-collection from start to the end
+     */
+    public static Collection<TopLevelItem> subCollection(Collection<TopLevelItem> jobs, int start) {
+        return subCollection(jobs, start, jobs.size());
+    }
+
+    /**
+     * Returns a sub-collection of TopLevelItems from the given start index to the end index.
+     * Used for pagination in project views.
+     * @param jobs the collection of jobs
+     * @param start the start index (inclusive)
+     * @param end the end index (exclusive)
+     * @return a sub-collection from start to end
+     */
+    public static Collection<TopLevelItem> subCollection(Collection<TopLevelItem> jobs, int start, int end) {
+        Collection<TopLevelItem> lists = new ArrayList<>();
+        TopLevelItem[] topLevelItems = jobs.toArray(new TopLevelItem[jobs.size()]);
+        for (int i = start; i < end; i++) {
+            lists.add(topLevelItems[i]);
+        }
+        return lists;
+    }
+
+    /**
      * @since 2.475
      */
     public static Cookie getCookie(HttpServletRequest req, String name) {
